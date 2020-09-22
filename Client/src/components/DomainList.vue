@@ -41,7 +41,8 @@
 <script>
 import "bootstrap/dist/css/bootstrap.css"
 import "font-awesome/css/font-awesome.css"
-import AppItemList from "./AppItemList"
+import axios from 'axios/dist/axios'
+import AppItemList from "./components/AppItemList"
 
 export default {
 	name: "App",
@@ -50,13 +51,37 @@ export default {
 	},
 	data: function(){
 		return {
-			prefixes: ["Air", "Jet", "Flight"],
-			sufixes: ["Hub", "Station", "Mart"]
+			prefixes: [],
+			sufixes: []
 		}
 	},
 	methods: {
 		addPrefix(prefix){
-			this.prefixes.push(prefix)
+			axios({
+				url: "http://localhost:4000",
+				method: "post",
+				data: {
+					query: `
+						mutation ($item: ItemInput){
+							newPrefix: saveItem(item: $item) {
+								id
+								type
+								description
+							}
+						}
+					`,
+					variables: {
+						item: {
+							type: "prefix",
+							description: prefix
+						}
+					}
+				}
+			}).then(response => {
+				const query = response.data
+				const newPrefix = query.data.newPrefix
+				this.prefixes.push(newPrefix.description)
+			})	
 		},
 		addSufix(sufix){
 			this.sufixes.push(sufix)
@@ -69,6 +94,46 @@ export default {
 			const index = this.sufixes.indexOf(sufix)
 			this.prefixes.splice(index,1)
 		},		
+		getPrefixes(){
+			axios({
+				url: "http://localhost:4000",
+				methods: "post",
+				data: {
+					query: `
+						{
+							prefixes: items(type: "prefix") {
+								id
+								type
+								description
+							}							
+						}
+					`
+				}
+			}).then(response => {
+				const query = response.data
+				this.prefixes = query.data.prefixes
+			})
+		},
+		getSufixes(){
+			axios({
+				url: "http://localhost:4000",
+				methods: "post",
+				data: {
+					query: `
+						{
+							sufixes: items(type: "sufix") {
+								id
+								type
+								description
+							}
+						}
+					`
+				}
+			}).then(response => {
+				const query = response.data
+				this.sufixes = query.data.sufixes
+			})
+		}
 	},
 	computed: {
 		//Computed properties, possuem watchers que só executarão novamente, quando as variaveis que ela depende, no casso
@@ -86,6 +151,10 @@ export default {
 			}
 			return domains
 		}
+	},
+	created(){
+		this.getPrefixes()
+		this.getSufixes()
 	}
 }
 </script>
